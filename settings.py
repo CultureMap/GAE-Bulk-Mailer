@@ -156,6 +156,20 @@ LOGGING = {
     }
 }
 
+
+
+# Due to a constant issue with task queue logs failing to flush due to exceeding the
+# 60s deadline, we're going to try flushing the logs after every line which will cause
+# immediately auto-flushing.
+# https://code.google.com/p/googleappengine/issues/detail?id=8809
+# See also https://developers.google.com/appengine/docs/python/logs/functions
+from google.appengine.api import logservice
+logservice.AUTOFLUSH_EVERY_SECONDS = None
+logservice.AUTOFLUSH_EVERY_BYTES = None
+logservice.AUTOFLUSH_EVERY_LINES = 1
+
+
+
 LIST_LIMIT = 100
 
 EMAILER = 'bulkmail.mailers.gae'
