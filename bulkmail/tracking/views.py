@@ -55,13 +55,15 @@ def verify_email (target):
   
 def ua_string (request):
   if request.META.has_key('HTTP_USER_AGENT'):
-    return request.META['HTTP_USER_AGENT']
+    #limit the string to 500 chars since we will be saving this in a String field
+    return request.META['HTTP_USER_AGENT'][:500]
     
   return None
   
 def refer_string (request):
   if request.META.has_key('HTTP_REFERER'):
-    return request.META['HTTP_REFERER']
+    #limit the string to 500 chars since we will be saving this in a String field
+    return request.META['HTTP_REFERER'][:500]
     
   return None
   
