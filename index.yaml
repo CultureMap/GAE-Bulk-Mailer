@@ -1,0 +1,6 @@
+indexes:
+
+- kind: Track
+  properties:
+  - name: ttype
+  - name: email

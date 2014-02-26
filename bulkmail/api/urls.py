@@ -14,4 +14,6 @@ urlpatterns += patterns('bulkmail.api.campaign.views',
   url(r'^campaign/add_recipients/$', 'campaign_add_recipients', name='campaign_add_recipients'),
   url(r'^campaign/send/test/$', 'campaign_send_test', name='campaign_send_test'),
   url(r'^campaign/send/$', 'campaign_send', name='campaign_send'),
+
+  url(r'^opens/$', 'get_opens', name='get_opens'),
 )

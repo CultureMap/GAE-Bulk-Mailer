@@ -111,4 +111,3 @@ def campaign_stats (request, list_id, campaign_id):
     return render_tpl(request, 'api/stats/campaign.html', c)
     
   raise http.Http404
-  

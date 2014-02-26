@@ -4,13 +4,14 @@ import datetime
 import logging
 import importlib
 import traceback
+from bulkmail.tracking.models import Track
 
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 
 from google.appengine.api import taskqueue
 
-from ...shortcuts import get_required, get_optional, ok
+from ...shortcuts import get_required, get_optional, ok, json_response
 from ...auth import key_required
 from ...exceptions import ApiException
 
@@ -24,11 +25,11 @@ EMailer = imp.EMailer
 def campaign_create (request):
   required = ('subject', 'reply_to', 'list_id', 'campaign_id', 'text')
   optional = ('html', 'from_name', 'analytics')
-  
+
   kwargs = get_required(request, required)
   kwargs.update(get_optional(request, optional))
   kwargs['salt'] = generate_salt(datetime.datetime.utcnow())
-  
+
   if Campaign.query(Campaign.campaign_id == kwargs['campaign_id'], Campaign.list_id == kwargs['list_id']).count() > 0:
     raise ApiException('Campaign with list_id and campaign_id already created')
     
@@ -142,4 +143,16 @@ def campaign_send_test (request):
       logging.error(traceback.format_exc())
       
   return ok()
-  
+
+
+@csrf_exempt
+@key_required
+def get_opens (request):
+  required = ('email',)
+
+  kwargs = get_required(request, required)
+
+  results = {}
+  results["count"] = Track.query().filter(Track.ttype=='open', Track.email==kwargs['email']).count()
+
+  return json_response(results)
