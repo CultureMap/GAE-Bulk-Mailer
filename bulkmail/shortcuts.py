@@ -47,4 +47,6 @@ def json_response (context):
   
 def ok ():
   return http.HttpResponse('OK', mimetype='text/plain')
-  
+
+def oops ():
+  return http.HttpResponse('Error 500', mimetype='text/plain', status=500)

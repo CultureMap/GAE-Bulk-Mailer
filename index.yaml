@@ -4,3 +4,33 @@ indexes:
   properties:
   - name: ttype
   - name: email
+
+- kind: Track
+  properties:
+  - name: email
+  - name: ttype
+  - name: created
+    direction: asc
+
+- kind: Track
+  properties:
+  - name: email
+  - name: ttype
+  - name: created
+    direction: desc
+
+- kind: Track
+  properties:
+  - name: email
+  - name: ttype
+  - name: list_id
+  - name: created
+    direction: asc
+
+- kind: Track
+  properties:
+  - name: email
+  - name: ttype
+  - name: list_id
+  - name: created
+    direction: desc

@@ -2,6 +2,7 @@ import logging
 
 from django import http
 
+from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
 
 from .models import Url, Track
@@ -73,14 +74,17 @@ def open_pixel (request, list_id, campaign_id, email=None):
   refer = refer_string(request)
   
   if email:
-    t = Track(ttype='open', list_id=list_id, campaign_id=campaign_id, email=email.lower(), user_agent=ua, referer=refer)
-    
+    email = email.lower()
+    t = Track(ttype='open', list_id=list_id, campaign_id=campaign_id, email=email, user_agent=ua, referer=refer)
+
+    taskqueue.add(url='/api/process-open', params={'email': email, 'list_id': list_id, 'campaign_id': campaign_id}, queue_name='stats')
+
   else:
     t = Track(ttype='open', list_id=list_id, campaign_id=campaign_id, user_agent=ua, referer=refer)
     
   t.detect_browser()
   t.put()
-  
+
   return http.HttpResponse(TRANSPARENT_1_PIXEL_GIF, content_type='image/gif')
   
 @verify_email

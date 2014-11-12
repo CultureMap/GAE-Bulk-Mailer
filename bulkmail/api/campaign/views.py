@@ -24,7 +24,9 @@ EMailer = imp.EMailer
 @key_required
 def campaign_create (request):
   required = ('subject', 'reply_to', 'list_id', 'campaign_id', 'text')
-  optional = ('html', 'from_name', 'analytics')
+  optional = ('html', 'from_name', 'analytics', 'mail_domain')
+
+  #raise ApiException('Emailing currently suspended')
 
   kwargs = get_required(request, required)
   kwargs.update(get_optional(request, optional))
@@ -86,7 +88,7 @@ def campaign_send (request):
 @key_required
 def campaign_send_test (request):
   required = ('subject', 'reply_to', 'list_id', 'campaign_id', 'text', 'test_emails')
-  optional = ('html', 'from_name', 'analytics')
+  optional = ('html', 'from_name', 'analytics', 'mail_domain')
   
   kwargs = get_required(request, required)
   kwargs.update(get_optional(request, optional))
@@ -120,6 +122,7 @@ def campaign_send_test (request):
     cmpgn.html,
     cmpgn.list_id,
     cmpgn.campaign_id,
+    cmpgn.mail_domain,
     cmpgn.from_name,
     cmpgn.salt,
     None
@@ -144,15 +147,34 @@ def campaign_send_test (request):
       
   return ok()
 
+def get_open_raw(email, list_id):
+
+  t = Track.query().filter(Track.ttype=='open', Track.email==email, Track.list_id==list_id).order(-Track.created)
+
+  results = None
+
+  opens = t.count()
+
+  if opens:
+      results = {}
+
+      results["opens"] = t.count()
+      for i in t:
+        results["last_open"] = datetime.datetime.strftime(i.created, '%Y-%m-%dT%H:%M:%S')
+        break
+
+  return results
+
 
 @csrf_exempt
 @key_required
 def get_opens (request):
-  required = ('email',)
+  required = ('email','list_id')
 
   kwargs = get_required(request, required)
 
-  results = {}
-  results["count"] = Track.query().filter(Track.ttype=='open', Track.email==kwargs['email']).count()
+  results = get_open_raw(kwargs['email'], kwargs['list_id'])
 
   return json_response(results)
+
+

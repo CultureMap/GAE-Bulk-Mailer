@@ -17,13 +17,14 @@ def emailer_key (*args):
   return hashlib.sha224(text).hexdigest()
   
 class BaseEmailer (object):
-  def __init__ (self, subject, reply_to, text_tpl, html_tpl, list_id, campaign_id, from_name, salt, analytics):
+  def __init__ (self, subject, reply_to, text_tpl, html_tpl, list_id, campaign_id, mail_domain, from_name, salt, analytics):
     self.subject = subject
     self.reply_to = reply_to
     self.text_tpl = text_tpl
     self.html_tpl = html_tpl
     self.list_id = list_id
     self.campaign_id = campaign_id
+    self.mail_domain = mail_domain
     self.salt = salt
     self.analytics = analytics
     
@@ -33,7 +34,8 @@ class BaseEmailer (object):
     self.frm = settings.DEFAULT_FROM_EMAIL
     if from_name:
       self.frm = '%s <%s>' % (from_name, settings.DEFAULT_FROM_EMAIL)
-      
+      self.from_name = from_name
+
     self.url_regex = re.compile(r"""(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>\[\]]+|\(([^\s()<>\[\]]+|(\([^\s()<>\[\]]+\)))*\))+(?:\(([^\s()<>\[\]]+|(\([^\s()<>\[\]]+\)))*\)|[^\s`!(){};:'".,<>?\[\]]))""")
     
   def get_tags (self, href):

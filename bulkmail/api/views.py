@@ -1,4 +1,7 @@
 import datetime
+import logging
+import urllib
+from bulkmail.api.campaign.views import get_open_raw
 
 from django import http
 from django.conf import settings
@@ -14,6 +17,7 @@ from ..tracking.models import Stats, Track
 
 from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
+from google.appengine.api import urlfetch
 
 @super_admin_required
 def key_list (request):
@@ -111,3 +115,24 @@ def campaign_stats (request, list_id, campaign_id):
     return render_tpl(request, 'api/stats/campaign.html', c)
     
   raise http.Http404
+
+@csrf_exempt
+def process_open (request):
+  email = request.POST.get('email', '')
+  list_id = request.POST.get('list_id', '')
+  #campaign_id = request.POST.get('campaign_id', '')
+
+  results = get_open_raw(email, list_id)
+
+  if results:
+
+    form_data = {'email': email, 'opens': results['opens'], 'last_open': results['last_open'], 'list_id': list_id,}
+    form_data.update(settings.REPORT_PAYLOAD)
+    form_data = urllib.urlencode(form_data)
+    result = urlfetch.fetch(url=settings.REPORT_OPEN_URL, payload=form_data, method=urlfetch.POST, headers={'Content-Type': 'application/x-www-form-urlencoded'})
+    logging.info('Open Report Status: ' + str(result.status_code))
+
+  else:
+    logging.info('Open Report Status: None found for %s and list %s' % (email, list_id))
+
+  return ok()

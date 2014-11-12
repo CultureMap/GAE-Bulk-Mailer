@@ -45,6 +45,7 @@ class Campaign (ndb.Model):
   
   list_id = ndb.StringProperty(required=True)
   campaign_id = ndb.StringProperty(required=True)
+  mail_domain = ndb.StringProperty(required=False)
   
   created = ndb.DateTimeProperty(auto_now_add=True)
   

@@ -12,6 +12,11 @@ urlpatterns = patterns('',
   
   url(r'^amazon/send$', 'bulkmail.views.amazon_sender', name='amazon_sender'),
   url(r'^amazon-bounce.*$', 'bulkmail.views.amazon_bouncer', name='amazon_bouncer'),
-  
+
+  url(r'^mailgun/send$', 'bulkmail.views.mailgun_sender', name='mailgun_sender'),
+  url(r'^mailgun/bounce$', 'bulkmail.views.mailgun_bouncer', name='mailgun_bouncer'),
+
+
+
   url(r'^$', 'bulkmail.views.home', name='home'),
 )
