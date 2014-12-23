@@ -95,7 +95,7 @@ class Stats (ndb.Model):
     pc = (float(count) / self.total_clicks) * 100
     return round(pc, 1)
     
-  def process_track (self, t, ptype):
+  def process_track (self, t):
     if t.created.minute % 10 >= 5:
       m = t.created.minute + (10 - (t.created.minute % 10))
       
@@ -110,14 +110,13 @@ class Stats (ndb.Model):
       time = t.created.replace(minute=m, second=0, microsecond=0)
       
     key = calendar.timegm(time.timetuple())
-    
-    if self.temp.has_key(key):
-      self.temp[key] += 1
-      
-    else:
-      self.temp[key] = 1
-      
-    if ptype == 'clicks':
+
+    if t.ttype == 'click':
+      if self.temp_clicks.has_key(key):
+        self.temp_clicks[key] += 1
+      else:
+        self.temp_clicks[key] = 1
+
       if t.tags:
         for tag in t.tags:
           if tag in self.tags:
@@ -133,7 +132,12 @@ class Stats (ndb.Model):
       else:
         self.urls[url] = 1
         
-    elif ptype == 'opens':
+    elif t.ttype == 'open':
+      if self.temp_opens.has_key(key):
+        self.temp_opens[key] += 1
+      else:
+        self.temp_opens[key] = 1
+
       key = 'Other'
       if t.email_client:
         key = t.email_client
@@ -148,34 +152,34 @@ class Stats (ndb.Model):
         self.clients[key] = 1
         
   def sort_data (self, ptype):
-    keys = self.temp.keys()
+    tmp = getattr(self, 'temp_'+ptype)
+    keys = tmp.keys()
     keys.sort()
     perm = []
     
     for k in keys:
-      perm.append((k, self.temp[k]))
+      perm.append((k, tmp[k]))
       
     setattr(self, ptype, perm)
     
-  def process (self, ptype, cursor=None):
-    ttype = ptype[:-1]
-    
+  def process (self, cursor=None):
+
     if cursor:
         cursor = Cursor(urlsafe=cursor)
 
-    total = 0
+    total_clicks = 0
+    total_opens = 0
     
-    self.temp = {}
-    if ptype == 'clicks' and cursor == None: #skip all cursor continuations, these values are already init'd
+    self.temp_clicks = {}
+    self.temp_opens = {}
+    if cursor == None: #skip all cursor continuations, these values are already init'd
       self.tags = {}
       self.urls = {}
-      self.clicks = 0
-      self.total_clicks = 0
-
-    if ptype == 'opens' and cursor == None: #skip all cursor continuations, these values are already init'd
       self.clients = {}
+      self.clicks = []
+      self.opens = []
       self.total_sends = 0
-      self.opens = 0
+      self.total_clicks = 0
       self.total_opens = 0
 
       from bulkmail.api.models import Campaign
@@ -188,17 +192,22 @@ class Stats (ndb.Model):
     tracks, cursor, more = Track.query(
         Track.list_id == self.list_id,
         Track.campaign_id == self.campaign_id,
-        Track.ttype == ttype,
-      ).fetch_page(100, start_cursor=cursor)
+        ndb.OR(Track.ttype == 'click', Track.ttype == 'open')
+      ).order(Track._key).fetch_page(100, start_cursor=cursor)
 
     for t in tracks:
-      self.process_track(t, ptype)
-      total += 1
+      self.process_track(t)
+      if t.ttype == 'click':
+        total_clicks += 1
+      elif t.ttype == 'open':
+        total_opens += 1
 
     #set total_clicks/total_opens
-    setattr(self, 'total_' + ptype, getattr(self, 'total_' + ptype) + total)
+    self.total_clicks = self.total_clicks + total_clicks
+    self.total_opens = self.total_opens + total_opens
     #set clicks/opens
-    self.sort_data(ptype)
+    self.sort_data('clicks')
+    self.sort_data('opens')
 
     self.put()
 
@@ -208,7 +217,6 @@ class Stats (ndb.Model):
         params={
           'list_id': self.list_id,
           'campaign_id': self.campaign_id,
-          'process': ptype,
           'key': self.key.urlsafe(),
           'cursor': cursor.urlsafe()
         },

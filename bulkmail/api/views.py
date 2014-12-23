@@ -66,7 +66,6 @@ def force_compile_stats (request):
 def compile_stats (request):
   list_id = request.POST.get('list_id', '')
   campaign_id = request.POST.get('campaign_id', '')
-  process = request.POST.get('process', '')
   key = request.POST.get('key', '')
   cursor = request.POST.get('cursor', None)
   
@@ -78,23 +77,9 @@ def compile_stats (request):
       stat = Stats.query(Stats.list_id == list_id, Stats.campaign_id == campaign_id).get()
       if not stat:
         stat = Stats(list_id=list_id, campaign_id=campaign_id)
-        
-    if not process:
-      process = 'opens'
       
-    stat.process(process, cursor=cursor)
-    
-    if process == 'opens' and cursor == None: #skip all cursor continuations; this first call to process='clicks' is just to fire off the process
-      taskqueue.add(
-        url='/api/compile-stats',
-        params={
-          'list_id': list_id,
-          'campaign_id': campaign_id,
-          'process': 'clicks',
-          'key': stat.key.urlsafe()
-        },
-        queue_name='stats'
-      )
+    stat.process(cursor=cursor)
+
       
   else:
     old = datetime.datetime.now() - datetime.timedelta(days=settings.COMPILE_STATS_PERIOD)
