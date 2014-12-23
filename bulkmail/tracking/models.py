@@ -7,6 +7,8 @@ from collections import OrderedDict
 import httpagentparser
 
 from google.appengine.ext import ndb
+from google.appengine.api import taskqueue
+from google.appengine.datastore.datastore_query import Cursor
 
 class Url (ndb.Model):
   url = ndb.StringProperty()
@@ -155,48 +157,67 @@ class Stats (ndb.Model):
       
     setattr(self, ptype, perm)
     
-  def process (self, ptype):
+  def process (self, ptype, cursor=None):
     ttype = ptype[:-1]
     
-    cursor = None
+    if cursor:
+        cursor = Cursor(urlsafe=cursor)
+
     total = 0
     
     self.temp = {}
-    if ptype == 'clicks':
+    if ptype == 'clicks' and cursor == None: #skip all cursor continuations, these values are already init'd
       self.tags = {}
       self.urls = {}
-      
-    if ptype == 'opens':
+      self.clicks = 0
+      self.total_clicks = 0
+
+    if ptype == 'opens' and cursor == None: #skip all cursor continuations, these values are already init'd
       self.clients = {}
       self.total_sends = 0
-      
+      self.opens = 0
+      self.total_opens = 0
+
       from bulkmail.api.models import Campaign
       c = Campaign.query(Campaign.campaign_id == self.campaign_id, Campaign.list_id == self.list_id).get()
       
       for key in c.send_data:
         sd = key.get()
         self.total_sends += len(sd.data)
-        
-    while 1:
-      tracks, cursor, more = Track.query(
+
+    tracks, cursor, more = Track.query(
         Track.list_id == self.list_id,
         Track.campaign_id == self.campaign_id,
         Track.ttype == ttype,
       ).fetch_page(100, start_cursor=cursor)
-      
-      for t in tracks:
-        self.process_track(t, ptype)
-        total += 1
-        
-      if more and cursor:
-        continue
-        
-      else:
-        break
-        
-    setattr(self, 'total_' + ptype, total)
+
+    for t in tracks:
+      self.process_track(t, ptype)
+      total += 1
+
+    #set total_clicks/total_opens
+    setattr(self, 'total_' + ptype, getattr(self, 'total_' + ptype) + total)
+    #set clicks/opens
     self.sort_data(ptype)
-    
+
+    self.put()
+
+    if more and cursor:
+      taskqueue.add(
+        url='/api/compile-stats',
+        params={
+          'list_id': self.list_id,
+          'campaign_id': self.campaign_id,
+          'process': ptype,
+          'key': self.key.urlsafe(),
+          'cursor': cursor.urlsafe()
+        },
+        queue_name='stats'
+      )
+
+
+
+
 WEB_CLIENTS = (
   ('google.com', 'GMail'),
   ('yahoo.com', 'Yahoo'),

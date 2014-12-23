@@ -68,6 +68,7 @@ def compile_stats (request):
   campaign_id = request.POST.get('campaign_id', '')
   process = request.POST.get('process', '')
   key = request.POST.get('key', '')
+  cursor = request.POST.get('cursor', None)
   
   if list_id and campaign_id:
     if key:
@@ -81,10 +82,9 @@ def compile_stats (request):
     if not process:
       process = 'opens'
       
-    stat.process(process)
-    stat.put()
+    stat.process(process, cursor=cursor)
     
-    if process == 'opens':
+    if process == 'opens' and cursor == None: #skip all cursor continuations; this first call to process='clicks' is just to fire off the process
       taskqueue.add(
         url='/api/compile-stats',
         params={
@@ -102,7 +102,7 @@ def compile_stats (request):
       taskqueue.add(url='/api/compile-stats', params={'list_id': cmpgn.list_id, 'campaign_id': cmpgn.campaign_id}, queue_name='stats')
       
   return ok()
-  
+
 @staff_required
 def campaign_stats (request, list_id, campaign_id):
   campaign = Campaign.query(Campaign.list_id == list_id, Campaign.campaign_id == campaign_id).get()
